@@ -80,12 +80,41 @@ func FetchUserByCredentials(emailOrUserId string, password string) (*User, *resu
 	}
 
 	if pgxscan.NotFound(err) {
-		return nil, result.Err(404, err, "USER_NOT_FOUND", "user with the given user id or email is not found")
+		return nil, result.ErrWithMetadata(404, err, "USER_NOT_FOUND", "user with the given credentials do not exist", map[string]string{
+			"email_or_user_id": "user with the given credentials do not exist",
+			"password":         "user with the given credentials do not exist",
+		})
 	} else if err != nil {
 		return nil, result.ServerErr(err)
 	}
 
 	return &user, nil
+}
+
+// check for constrainted duplicates (in updates or inserts) and returns correspoding errors or nil
+//
+// example of constrained duplicates
+//
+//	`user_id`
+//	`email`
+func CheckDupeAndServerErr(err error) *result.Error {
+	if err != nil {
+		if res := IsDuplicateKeyError(err); res != "" {
+			if res == "users_user_id_key" {
+				return result.ErrWithMetadata(400, err, "USER_ID_TAKEN", "a user with the same user id already exists", map[string]string{
+					"user_id": "user id already exists",
+				})
+			} else {
+				// users_email_key
+				return result.ErrWithMetadata(400, err, "EMAIL_TAKEN", "a user with the same email already exists", map[string]string{
+					"email": "email already exists",
+				})
+			}
+		} else {
+			return result.ServerErr(err)
+		}
+	}
+	return nil
 }
 
 func CreateUser(userId string, username string, email string, password string) (*User, *result.Error) {
@@ -98,22 +127,39 @@ func CreateUser(userId string, username string, email string, password string) (
 
 	fmt.Println(err)
 
-	if err != nil {
-		if res := IsDuplicateKeyError(err); res != "" {
-			if res == "users_user_id_key" {
-				return nil, result.ErrWithMetadata(400, err, "USER_ID_TAKEN", "a user with the same user id already exists", map[string]string{
-					"user_id": "user id already exists",
-				})
-			} else {
-				// users_email_key
-				return nil, result.ErrWithMetadata(400, err, "EMAIL_TAKEN", "a user with the same email already exists", map[string]string{
-					"email": "email already exists",
-				})
-			}
-		} else {
-			return nil, result.ServerErr(err)
-		}
+	derr := CheckDupeAndServerErr(err)
+	if derr != nil {
+		return nil, derr
+	}
+	return &user, nil
+}
+
+// updates a user (no credentials) using UPDATE - SET
+//
+// if a field is nil then it will use the previous value
+//
+//	current_user
+func UpdateUserInfo(current_user User, user_id *string, username *string, pfp_url *string) (*User, *result.Error) {
+	var user User
+	// TODO
+	if user_id != nil {
+		current_user.UserId = *user_id
 	}
 
+	if username != nil {
+		current_user.Username = *username
+	}
+
+	if pfp_url != nil {
+		current_user.PfpUrl = pfp_url
+	}
+
+	err := pgxscan.Get(context.Background(), DB, &user, "UPDATE users SET user_id=$1, username=$2, pfp_url=$3 WHERE uid=$4 RETURNING *",
+		current_user.UserId, current_user.Username, current_user.PfpUrl, current_user.Uid)
+
+	derr := CheckDupeAndServerErr(err)
+	if derr != nil {
+		return nil, derr
+	}
 	return &user, nil
 }
