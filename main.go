@@ -46,7 +46,7 @@ func main() {
 	r.GET("/users/@me", middlewares.AuthRequired(), handlers.GetMe)
 	r.GET("/users/:user_id", handlers.GetByUserId)
 	// TODO: NEED TESTING
-	// r.PATCH("/users/@me", middlewares.AuthRequired(), handlers.PatchMe)
+	r.PATCH("/users/@me", middlewares.AuthRequired(), handlers.PatchMe)
 
 	r.Run(env.CServerAddress)
 }

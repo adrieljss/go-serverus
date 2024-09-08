@@ -42,9 +42,9 @@ func GetMe(ctx *gin.Context) {
 }
 
 type PatchUserRequestBody struct {
-	UserId   *string `json:"user_id"`
-	Username *string `json:"username"`
-	PfpUrl   *string `json:"pfp_url"`
+	UserId   string `json:"user_id"`
+	Username string `json:"username"`
+	PfpUrl   string `json:"pfp_url"`
 }
 
 func (a PatchUserRequestBody) Validate() error {
@@ -55,7 +55,6 @@ func (a PatchUserRequestBody) Validate() error {
 	)
 }
 
-// TODO
 // PATCH - Updates user information
 //
 // relies on protected middleware
@@ -78,7 +77,9 @@ func PatchMe(ctx *gin.Context) {
 		return
 	}
 
-	newUser, err := db.UpdateUserInfo(user.(db.User), patchRequestBody.UserId, patchRequestBody.Username, patchRequestBody.PfpUrl)
+	var us *db.User = user.(*db.User)
+
+	newUser, err := db.UpdateUserInfo(*us, patchRequestBody.UserId, patchRequestBody.Username, patchRequestBody.PfpUrl)
 	if err != nil {
 		err.SendJSON(ctx)
 		return

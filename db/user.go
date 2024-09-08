@@ -139,19 +139,19 @@ func CreateUser(userId string, username string, email string, password string) (
 // if a field is nil then it will use the previous value
 //
 //	current_user
-func UpdateUserInfo(current_user User, user_id *string, username *string, pfp_url *string) (*User, *result.Error) {
+func UpdateUserInfo(current_user User, user_id string, username string, pfp_url string) (*User, *result.Error) {
 	var user User
 	// TODO
-	if user_id != nil {
-		current_user.UserId = *user_id
+	if user_id != "" {
+		current_user.UserId = user_id
 	}
 
-	if username != nil {
-		current_user.Username = *username
+	if username != "" {
+		current_user.Username = username
 	}
 
-	if pfp_url != nil {
-		current_user.PfpUrl = pfp_url
+	if pfp_url != "" {
+		current_user.PfpUrl = &pfp_url
 	}
 
 	err := pgxscan.Get(context.Background(), DB, &user, "UPDATE users SET user_id=$1, username=$2, pfp_url=$3 WHERE uid=$4 RETURNING *",
