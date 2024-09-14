@@ -77,9 +77,7 @@ func PatchMe(ctx *gin.Context) {
 		return
 	}
 
-	var us *db.User = user.(*db.User)
-
-	newUser, err := db.UpdateUserInfo(*us, patchRequestBody.UserId, patchRequestBody.Username, patchRequestBody.PfpUrl)
+	newUser, err := db.UpdateUserInfo(*(user.(*db.User)), patchRequestBody.UserId, patchRequestBody.Username, patchRequestBody.PfpUrl)
 	if err != nil {
 		err.SendJSON(ctx)
 		return

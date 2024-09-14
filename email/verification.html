@@ -1,0 +1,20 @@
+<head>
+  <style>
+      * {
+          font-family: Arial, Gadget, sans-serif;
+      }
+  </style>
+</head>
+<body>
+  <div style="padding: .5rem 2rem;">
+      <h1>{{.AppName}} Email Verification</h1>
+      <p>Click the button below to verify your email, if this is not you, <br/>
+      please ignore this email.</p>
+      
+      <div style="margin: 2rem 0;">
+          <a style="background-color:#000;color:#fff;padding: .5rem 1.5rem;font-weight:bold;margin:2rem 0;" href="{{.AppRootUrl}}/verifyEmail/{{.VerifyEmailCode}}">Verify Email</a>
+      </div>
+      <p>if the button above does not work, visit the following link: <br/> <a href="{{.AppRootUrl}}/verifyEmail/{{.VerifyEmailCode}}">{{.AppRootUrl}}/verifyEmail/{{.VerifyEmailCode}}</a></p>
+      
+  </div>
+</body>
