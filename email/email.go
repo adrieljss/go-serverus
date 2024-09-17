@@ -19,11 +19,12 @@ var emailVerificationHtmlCache string
 
 // loads all neccessary files to the cache
 func StartEmailService() {
-	b, err := os.ReadFile("./verification.html")
+	b, err := os.ReadFile("email/verification.html")
 	if err != nil {
 		logrus.Fatal("cannot load/read email verification file to cache")
 		return
 	}
+	logrus.Warn("successfully loaded email templates to cache")
 	emailVerificationHtmlCache = string(b)
 }
 
@@ -37,7 +38,7 @@ func SendEmailVerification(targetEmail string, emailVerificationUrlCode string) 
 	m := gomail.NewMessage()
 	m.SetHeader("From", env.CSMTPFrom)
 	m.SetHeader("To", targetEmail)
-	m.SetHeader("Subject", fmt.Sprintf("Email Verification for %s Website", env.CAppName))
+	m.SetHeader("Subject", fmt.Sprintf("[%s] Email Verification", env.CAppName))
 	template := template.New("email template")
 	template, err := template.Parse(emailVerificationHtmlCache)
 	if err != nil {
@@ -61,4 +62,8 @@ func SendEmailVerification(targetEmail string, emailVerificationUrlCode string) 
 		return result.Err(404, ee, "CANT_SEND_EMAIL", "unable to send email to target email")
 	}
 	return nil
+}
+
+func ResetPasswordEmail() {
+
 }

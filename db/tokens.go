@@ -15,6 +15,7 @@ func GenerateJwtToken(user *User) (string, *result.Error) {
 
 	// claims["username"] = user.Username
 	claims["user_uid"] = user.Uid
+	claims["hashed_password"] = user.Password
 	// jwt token is valid for 7 days after issue
 	claims["exp"] = time.Now().AddDate(0, 0, 7).Unix()
 	claims["iat"] = time.Now().Unix()
@@ -55,5 +56,10 @@ func ExtractUserFromJwt(tokenString string) (*User, *result.Error) {
 		return nil, result.Err(401, err, "INVALID_TOKEN", "auth token must have user_uid field")
 	}
 
-	return FetchUserByUid(uid.(string))
+	hashedPsw, hasHashedPsw := claims["hashed_password"]
+	if !hasHashedPsw {
+		return nil, result.Err(401, err, "INVALID_TOKEN", "auth token must have hashed_password field")
+	}
+
+	return FetchUserByUidAndHashedPassword(uid.(string), hashedPsw.(string))
 }

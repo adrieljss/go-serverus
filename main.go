@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/adrieljansen/go-serverus/db"
+	"github.com/adrieljansen/go-serverus/email"
 	"github.com/adrieljansen/go-serverus/env"
 	"github.com/adrieljansen/go-serverus/handlers"
 	"github.com/adrieljansen/go-serverus/middlewares"
@@ -26,25 +29,31 @@ func main() {
 	env.CSMTPFrom = env.LoadString("SMTP_FROM")
 	env.CSMTPPass = env.LoadString("SMTP_PASS")
 
+	var r *gin.Engine
 	if env.CProductionMode {
 		gin.SetMode(gin.ReleaseMode)
+		r = gin.New()
+		r.Use(gin.Recovery())
 		logrus.SetReportCaller(true)
 		logrus.SetFormatter(&logrus.JSONFormatter{})
 		logrus.SetLevel(logrus.WarnLevel)
 		// TODO: add logrus.SetOutput()
 	} else {
 		// development mode
+		r = gin.Default()
 		logrus.SetFormatter(&logrus.TextFormatter{
 			ForceColors: true,
 		})
 	}
 
 	db.ConnectToDB(env.CPostgresURI)
-	r := gin.Default()
+
+	email.StartEmailService()
+	// email.SendEmailVerification("arvinhijinks@gmail.com", "123")
 
 	// is server ok
 	r.GET("/", func(ctx *gin.Context) {
-		ctx.String(200, "server is ok")
+		ctx.String(200, fmt.Sprintf("%s server is ok, root dir: %s", env.CAppName, env.CAppRootUrl))
 	})
 
 	r.POST("/auth/register", handlers.Register)

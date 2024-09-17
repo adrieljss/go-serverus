@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -53,6 +52,19 @@ func FetchUserByUserId(userId string) (*User, *result.Error) {
 func FetchUserByUid(uid string) (*User, *result.Error) {
 	var user User
 	err := pgxscan.Get(context.Background(), DB, &user, "select * from users where uid = $1", uid)
+
+	if pgxscan.NotFound(err) {
+		return nil, result.Err(404, err, "USER_NOT_FOUND", "user with the given uid is not found")
+	} else if err != nil {
+		return nil, result.ServerErr(err)
+	}
+
+	return &user, nil
+}
+
+func FetchUserByUidAndHashedPassword(uid string, hashed_password string) (*User, *result.Error) {
+	var user User
+	err := pgxscan.Get(context.Background(), DB, &user, "select * from users where uid = $1 AND password = $2", uid, hashed_password)
 
 	if pgxscan.NotFound(err) {
 		return nil, result.Err(404, err, "USER_NOT_FOUND", "user with the given uid is not found")
@@ -125,14 +137,15 @@ func CreateUser(userId string, username string, email string, password string) (
 		"INSERT INTO users (user_id, username, email, password) VALUES ($1,$2,$3,crypt($4, gen_salt('bf'))) RETURNING *",
 		userId, username, email, password)
 
-	fmt.Println(err)
-
 	derr := CheckDupeAndServerErr(err)
 	if derr != nil {
 		return nil, derr
 	}
 	return &user, nil
 }
+
+// ! THE FUNCTIONS BELOW DO NOT CHECK IF USER EXISTS BEFOREHAND
+// ! SO ALWAYS USE IN PROTECTED ROUTE OR MAY CAUSE UNKNOWN SERVER_ERRORS
 
 // updates a user (no credentials) using UPDATE - SET
 //
@@ -160,6 +173,23 @@ func UpdateUserInfo(current_user User, user_id string, username string, pfp_url 
 	derr := CheckDupeAndServerErr(err)
 	if derr != nil {
 		return nil, derr
+	}
+	return &user, nil
+}
+
+// updates a user password using UPDATE - SET
+func UpdateUserPassword(current_user User, unhashed_new_password string) (*User, *result.Error) {
+	var user User
+
+	if unhashed_new_password == "" {
+		return nil, result.Err(400, nil, "EMPTY_NEW_PASSWORD", "new password must not be empty")
+	}
+
+	err := pgxscan.Get(context.Background(), DB, &user, "UPDATE users SET password = crypt($1, gen_salt('bf')) WHERE uid=$2 RETURNING *",
+		unhashed_new_password, current_user.Uid)
+
+	if err != nil {
+		return nil, result.ServerErr(err)
 	}
 	return &user, nil
 }

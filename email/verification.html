@@ -8,13 +8,14 @@
 <body>
   <div style="padding: .5rem 2rem;">
       <h1>{{.AppName}} Email Verification</h1>
-      <p>Click the button below to verify your email, if this is not you, <br/>
-      please ignore this email.</p>
+      <p>Hello,<p>
+      <p>Please verify your email address using the link below to complete account setup.</p>
+      <p>Your verification link will expire in 24 hours, so make sure you use it as soon as you can.</p>
       
       <div style="margin: 2rem 0;">
-          <a style="background-color:#000;color:#fff;padding: .5rem 1.5rem;font-weight:bold;margin:2rem 0;" href="{{.AppRootUrl}}/verifyEmail/{{.VerifyEmailCode}}">Verify Email</a>
+          <a style="background-color:#fbbf24;color:#fff;padding: .5rem 1.5rem;font-weight:bold;margin:2rem 0;" href="{{.AppRootUrl}}/verifyEmail/{{.VerifyEmailCode}}">Verify Email</a>
       </div>
       <p>if the button above does not work, visit the following link: <br/> <a href="{{.AppRootUrl}}/verifyEmail/{{.VerifyEmailCode}}">{{.AppRootUrl}}/verifyEmail/{{.VerifyEmailCode}}</a></p>
-      
+      <p>If you did not request this code then there is no further action you need to take. No account will be created.</p>
   </div>
 </body>
