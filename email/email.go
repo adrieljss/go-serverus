@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"html/template"
 	"os"
+	"time"
 
+	"github.com/adrieljansen/go-serverus/db"
 	"github.com/adrieljansen/go-serverus/env"
 	"github.com/adrieljansen/go-serverus/result"
+	"github.com/adrieljansen/go-serverus/utils"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/gomail.v2"
 )
@@ -15,6 +18,12 @@ import (
 // email module for GoServerus
 // tested for GMail
 
+type PendingConfirmationEmail struct {
+	VerificationCode string
+	UserToCreate     db.RequiredUser
+}
+
+var PendingConfirmationEmailRegisterCache *utils.TtlMap[string, PendingConfirmationEmail]
 var emailVerificationHtmlCache string
 
 // loads all neccessary files to the cache
@@ -26,6 +35,10 @@ func StartEmailService() {
 	}
 	logrus.Warn("successfully loaded email templates to cache")
 	emailVerificationHtmlCache = string(b)
+
+	// every 10 minutes clear expired
+	PendingConfirmationEmailRegisterCache = utils.NewTtlMap[string, PendingConfirmationEmail](time.Minute * 10)
+	logrus.Warn("started goroutine for confirmation email ttl cache")
 }
 
 type EmailVerificationArgs struct {
@@ -34,6 +47,7 @@ type EmailVerificationArgs struct {
 	VerifyEmailCode string
 }
 
+// Sends a verification link of /verifyEmail/{emailVerificationUrlCode} to the target email
 func SendEmailVerification(targetEmail string, emailVerificationUrlCode string) *result.Error {
 	m := gomail.NewMessage()
 	m.SetHeader("From", env.CSMTPFrom)

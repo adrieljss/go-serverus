@@ -7,6 +7,8 @@ import (
 
 	"github.com/adrieljansen/go-serverus/result"
 	"github.com/georgysavva/scany/v2/pgxscan"
+	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/go-ozzo/ozzo-validation/is"
 )
 
 // CREATE TABLE IF NOT EXISTS users (
@@ -29,10 +31,53 @@ type User struct {
 	LastUpdated *time.Time `json:"last_updated"`
 }
 
+// this struct is used when want to create users
+type RequiredUser struct {
+	UserId   string `json:"user_id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func (a RequiredUser) Validate() error {
+	return validation.ValidateStruct(&a,
+		validation.Field(&a.UserId, validation.Required, validation.Length(3, 35), is.Alphanumeric),
+		validation.Field(&a.Username, validation.Required, validation.Length(2, 35)),
+		validation.Field(&a.Email, validation.Required, is.Email),
+		validation.Field(&a.Password, validation.Required, validation.Length(5, 30)),
+	)
+}
+
 // clears out private information - emails and passwords
 func (user *User) ClearPrivateInfo() {
 	user.Email = ""
 	user.Password = ""
+}
+
+// check for duplicated users
+func HasUserWithSameId(userId string) (bool, *result.Error) {
+	var user User
+	err := pgxscan.Get(context.Background(), DB, &user, "select * from users where user_id = $1", userId)
+
+	if pgxscan.NotFound(err) {
+		return false, nil
+	} else if err != nil {
+		return false, result.ServerErr(err)
+	}
+	return true, nil
+}
+
+// check for duplicated users
+func HasUserWithSameEmail(email string) (bool, *result.Error) {
+	var user User
+	err := pgxscan.Get(context.Background(), DB, &user, "select * from users where email = $1", email)
+
+	if pgxscan.NotFound(err) {
+		return false, nil
+	} else if err != nil {
+		return false, result.ServerErr(err)
+	}
+	return true, nil
 }
 
 // no cache

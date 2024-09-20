@@ -41,6 +41,7 @@ func main() {
 	} else {
 		// development mode
 		r = gin.Default()
+		r.POST("/auth/registerRaw", handlers.RegisterRaw)
 		logrus.SetFormatter(&logrus.TextFormatter{
 			ForceColors: true,
 		})
@@ -56,8 +57,9 @@ func main() {
 		ctx.String(200, fmt.Sprintf("%s server is ok, root dir: %s", env.CAppName, env.CAppRootUrl))
 	})
 
+	r.GET("/verifyEmail")
 	r.POST("/auth/register", handlers.Register)
-	// TODO: r.POST("/auth/verifyEmail", handlers.VerifyEmail)
+	r.POST("/auth/verifyEmail", handlers.VerifyEmail)
 	r.POST("/auth/login", handlers.Login)
 	r.GET("/users/@me", middlewares.AuthRequired(), handlers.GetMe)
 	r.GET("/users/:user_id", handlers.GetByUserId)
