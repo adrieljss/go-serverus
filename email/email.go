@@ -44,11 +44,12 @@ func StartEmailService() {
 type EmailVerificationArgs struct {
 	AppName         string
 	AppRootUrl      string
+	UserId          string
 	VerifyEmailCode string
 }
 
 // Sends a verification link of /verifyEmail/{emailVerificationUrlCode} to the target email
-func SendEmailVerification(targetEmail string, emailVerificationUrlCode string) *result.Error {
+func SendEmailVerification(targetEmail string, emailVerificationUrlCode string, userId string) *result.Error {
 	m := gomail.NewMessage()
 	m.SetHeader("From", env.CSMTPFrom)
 	m.SetHeader("To", targetEmail)
@@ -64,6 +65,7 @@ func SendEmailVerification(targetEmail string, emailVerificationUrlCode string) 
 		AppName:         env.CAppName,
 		AppRootUrl:      env.CAppRootUrl,
 		VerifyEmailCode: emailVerificationUrlCode,
+		UserId:          userId,
 	}
 	e := template.Execute(&buf, args)
 	if e != nil {
@@ -71,6 +73,7 @@ func SendEmailVerification(targetEmail string, emailVerificationUrlCode string) 
 		return nil
 	}
 	m.SetBody("text/html", buf.String())
+	m.Embed("./public/logo.png") // cop can not be svg
 	d := gomail.NewDialer(env.CSMTPHost, int(env.CSMTPPort), env.CSMTPFrom, env.CSMTPPass)
 	if ee := d.DialAndSend(m); ee != nil {
 		return result.Err(404, ee, "CANT_SEND_EMAIL", "unable to send email to target email")

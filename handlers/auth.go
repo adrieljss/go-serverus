@@ -76,7 +76,7 @@ func Register(ctx *gin.Context) {
 	}
 
 	go func() {
-		err := email.SendEmailVerification(registerRequestBody.Email, otpCode)
+		err := email.SendEmailVerification(registerRequestBody.Email, otpCode, registerRequestBody.UserId)
 		if err != nil {
 			// err.SendJSON(ctx)
 			return

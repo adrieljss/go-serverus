@@ -1,4 +1,6 @@
 # go-serverus
+![GoServerus Logo](/public/logo.svg)  
+
 This is a backend template code written in golang, extending the gin golang library. **This is not a library.**
 
 Packed Features:
