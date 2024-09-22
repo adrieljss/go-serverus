@@ -11,3 +11,4 @@ Packed Features:
 - PostgreSQL Database (Basic user table) (DONE)
 - Redis Caching (TODO)
 - Cloudinary or any image storing API Handler (for image/video uploading) (TODO)
+- Ratelimiting (TODO)
