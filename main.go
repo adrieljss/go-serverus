@@ -64,6 +64,8 @@ func main() {
 	r.GET("/users/@me", middlewares.AuthRequired(), handlers.GetMe)
 	r.GET("/users/:user_id", handlers.GetByUserId)
 	r.PATCH("/users/@me", middlewares.AuthRequired(), handlers.PatchMe)
+	r.PATCH("/users/@me/password", middlewares.AuthRequired(), handlers.PatchMeCredentials)
+	r.POST("/users/@me/verifyResetPass", middlewares.AuthRequired(), handlers.VerifyResetPass)
 
 	r.Run(env.CServerAddress)
 }

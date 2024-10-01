@@ -9,7 +9,6 @@ import (
 	"github.com/adrieljansen/go-serverus/result"
 	"github.com/gin-gonic/gin"
 	validation "github.com/go-ozzo/ozzo-validation"
-	"github.com/pquerna/otp/totp"
 )
 
 // # POST - Register a user
@@ -69,13 +68,7 @@ func Register(ctx *gin.Context) {
 		return
 	}
 
-	otpCode, errOtp := totp.GenerateCode(registerRequestBody.Password, time.Now())
-	if errOtp != nil {
-		result.ServerErr(errOtp).SendJSON(ctx)
-		return
-	}
-
-	go func() {
+	err := email.GenerateOtpAndAct(registerRequestBody.Password, func(otpCode string) {
 		err := email.SendEmailVerification(registerRequestBody.Email, otpCode, registerRequestBody.UserId)
 		if err != nil {
 			// err.SendJSON(ctx)
@@ -84,14 +77,19 @@ func Register(ctx *gin.Context) {
 
 		email.PendingConfirmationEmailRegisterCache.Store(registerRequestBody.Email, email.PendingConfirmationEmail{
 			VerificationCode: otpCode,
-			UserToCreate:     registerRequestBody,
-		}, time.Now().Add(time.Minute*40).Unix()) // expires in 40 mins
-	}() // to reduce wait time
+			UserToCreate:     &registerRequestBody,
+		}, time.Now().Add(time.Minute*40).Unix())
+	})
+
+	if err != nil {
+		err.SendJSON(ctx)
+		return
+	}
 
 	result.Ok(204, "verification email sent").SendJSON(ctx)
 }
 
-// GET - The link that is inside a verification email
+// POST - To verify email using given otp code
 //
 // needs the following queries
 //
