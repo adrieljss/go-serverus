@@ -52,6 +52,10 @@ func main() {
 	email.StartEmailService()
 	// email.SendEmailVerification("arvinhijinks@gmail.com", "123")
 
+	middlewares.StartIPRateLimiterService(2, 5)
+
+	r.Use(middlewares.RateLimitRequired())
+
 	// is server ok
 	r.GET("/", func(ctx *gin.Context) {
 		ctx.String(200, fmt.Sprintf("%s server is ok, root dir: %s", env.CAppName, env.CAppRootUrl))
