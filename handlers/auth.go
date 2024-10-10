@@ -52,7 +52,7 @@ func Register(ctx *gin.Context) {
 	}
 
 	{
-		has, err := db.HasUserWithSameEmail(registerRequestBody.Email)
+		has, err := db.UserExistsEmail(registerRequestBody.Email)
 		if err != nil {
 			err.SendJSON(ctx)
 			return
@@ -121,24 +121,15 @@ func VerifyEmail(ctx *gin.Context) {
 		return
 	}
 
-	user, errRes := db.CreateUser(req.UserToCreate.UserId, req.UserToCreate.Username, req.UserToCreate.Email, req.UserToCreate.Password)
+	res, errRes := db.CreateUserAndGenerateJWT(req.UserToCreate.UserId, req.UserToCreate.Username, req.UserToCreate.Email, req.UserToCreate.Password)
 	if errRes != nil {
 		errRes.SendJSON(ctx)
 		return
 	}
 
-	jwt, err := db.GenerateJwtToken(user)
-	if err != nil {
-		err.SendJSON(ctx)
-		return
-	}
-
 	email.PendingConfirmationEmailRegisterCache.Delete(emailString)
 
-	mp := make(map[string]any)
-	mp["user"] = user
-	mp["jwt"] = jwt
-	result.Ok(200, mp).SendJSON(ctx)
+	result.Ok(200, res).SendJSON(ctx)
 }
 
 // # POST - Register a user
@@ -167,22 +158,13 @@ func RegisterRaw(ctx *gin.Context) {
 		return
 	}
 
-	user, errRes := db.CreateUser(registerRequestBody.UserId, registerRequestBody.Username, registerRequestBody.Email, registerRequestBody.Password)
+	res, errRes := db.CreateUserAndGenerateJWT(registerRequestBody.UserId, registerRequestBody.Username, registerRequestBody.Email, registerRequestBody.Password)
 	if errRes != nil {
 		errRes.SendJSON(ctx)
 		return
 	}
 
-	jwt, err := db.GenerateJwtToken(user)
-	if err != nil {
-		err.SendJSON(ctx)
-		return
-	}
-
-	mp := make(map[string]any)
-	mp["user"] = user
-	mp["jwt"] = jwt
-	result.Ok(200, mp).SendJSON(ctx)
+	result.Ok(200, res).SendJSON(ctx)
 }
 
 type LoginRequestBody struct {
@@ -216,20 +198,11 @@ func Login(ctx *gin.Context) {
 		return
 	}
 
-	user, err := db.FetchUserByCredentials(loginRequestBody.EmailOrUserId, loginRequestBody.Password)
+	res, err := db.LoginAndGenerateJWT(loginRequestBody.EmailOrUserId, loginRequestBody.Password)
 	if err != nil {
 		err.SendJSON(ctx)
 		return
 	}
 
-	jwt, err := db.GenerateJwtToken(user)
-	if err != nil {
-		err.SendJSON(ctx)
-		return
-	}
-
-	mp := make(map[string]any)
-	mp["user"] = user
-	mp["jwt"] = jwt
-	result.Ok(200, mp).SendJSON(ctx)
+	result.Ok(200, res).SendJSON(ctx)
 }

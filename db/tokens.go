@@ -63,3 +63,65 @@ func ExtractUserFromJwt(tokenString string) (*User, *result.Error) {
 
 	return FetchUserByUidAndHashedPassword(uid.(string), hashedPsw.(string))
 }
+
+type GenericUserJWTRes struct {
+	JWT  string `json:"jwt"`
+	User *User  `json:"user"`
+}
+
+// this is dangerous because only email is needed to authenticate
+//
+// use only in OAuth2 stuff, or other of which you are sure that
+// the owner of the email is correct
+func DangerousLoginAndGenerateJWT(email string) (*GenericUserJWTRes, *result.Error) {
+	user, err := FetchUserByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+
+	jwt, err := GenerateJwtToken(user)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GenericUserJWTRes{
+		JWT:  jwt,
+		User: user,
+	}, nil
+}
+
+// login with the essential credentials
+func LoginAndGenerateJWT(emailOrUserId string, password string) (*GenericUserJWTRes, *result.Error) {
+	user, err := FetchUserByCredentials(emailOrUserId, password)
+	if err != nil {
+		return nil, err
+	}
+
+	jwt, err := GenerateJwtToken(user)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GenericUserJWTRes{
+		JWT:  jwt,
+		User: user,
+	}, nil
+}
+
+// create a user and generate jwt token
+func CreateUserAndGenerateJWT(userId string, username string, email string, password string) (*GenericUserJWTRes, *result.Error) {
+	user, err := CreateUser(userId, username, email, password)
+	if err != nil {
+		return nil, err
+	}
+
+	jwt, err := GenerateJwtToken(user)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GenericUserJWTRes{
+		JWT:  jwt,
+		User: user,
+	}, nil
+}

@@ -7,10 +7,13 @@ import (
 	"github.com/adrieljansen/go-serverus/email"
 	"github.com/adrieljansen/go-serverus/env"
 	"github.com/adrieljansen/go-serverus/handlers"
+	oauth_handlers "github.com/adrieljansen/go-serverus/handlers/oauth2"
 	"github.com/adrieljansen/go-serverus/middlewares"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
 
 func main() {
@@ -28,6 +31,8 @@ func main() {
 	env.CSMTPPort = env.LoadUint16("SMTP_PORT")
 	env.CSMTPFrom = env.LoadString("SMTP_FROM")
 	env.CSMTPPass = env.LoadString("SMTP_PASS")
+	env.CGoogleClientID = env.LoadString("GOOGLE_CLIENT_ID")
+	env.CGoogleClientSecret = env.LoadString("GOOGLE_CLIENT_SECRET")
 
 	var r *gin.Engine
 	if env.CProductionMode {
@@ -52,6 +57,7 @@ func main() {
 	email.StartEmailService()
 	// email.SendEmailVerification("arvinhijinks@gmail.com", "123")
 
+	// rate limit bucket will be refilled at 2 requests/second, with max size up to 5 req per bucket
 	middlewares.StartIPRateLimiterService(2, 5)
 
 	r.Use(middlewares.RateLimitRequired())
@@ -65,6 +71,18 @@ func main() {
 	r.POST("/auth/register", handlers.Register)
 	r.POST("/auth/verifyEmail", handlers.VerifyEmail)
 	r.POST("/auth/login", handlers.Login)
+
+	oauth2Config := &oauth2.Config{
+		ClientID:     env.CGoogleClientID,
+		ClientSecret: env.CGoogleClientSecret,
+		RedirectURL:  fmt.Sprintf("%s/auth/oauth2/google/callback", env.CAppRootUrl),
+		Scopes:       []string{"email", "profile"},
+		Endpoint:     google.Endpoint,
+	}
+	// oauth2
+	r.GET("/auth/oauth2/google", oauth_handlers.GoogleOAuth2(oauth2Config))
+	r.GET("/auth/oauth2/google/callback", oauth_handlers.GoogleOAuth2Callback(oauth2Config))
+
 	r.GET("/users/@me", middlewares.AuthRequired(), handlers.GetMe)
 	r.GET("/users/:user_id", handlers.GetByUserId)
 	r.PATCH("/users/@me", middlewares.AuthRequired(), handlers.PatchMe)

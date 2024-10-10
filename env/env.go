@@ -9,16 +9,19 @@ import (
 // this is env cache is stored, to not do os.Getenv() everytime
 // and to do strict typing
 var (
-	CAppName        string
-	CAppRootUrl     string
-	CServerAddress  string
-	CProductionMode bool
-	CPostgresURI    string
-	CJwtSignature   []byte
-	CSMTPHost       string
-	CSMTPPort       uint16
-	CSMTPFrom       string
-	CSMTPPass       string
+	CAppName            string
+	CAppRootUrl         string
+	CFrontendRootUrl    string
+	CServerAddress      string
+	CProductionMode     bool
+	CPostgresURI        string
+	CJwtSignature       []byte
+	CSMTPHost           string
+	CSMTPPort           uint16
+	CSMTPFrom           string
+	CSMTPPass           string
+	CGoogleClientID     string
+	CGoogleClientSecret string
 )
 
 func getEnv(key string) string {

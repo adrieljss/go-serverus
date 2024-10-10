@@ -68,7 +68,7 @@ func HasUserWithSameId(userId string) (bool, *result.Error) {
 }
 
 // check for duplicated users
-func HasUserWithSameEmail(email string) (bool, *result.Error) {
+func UserExistsEmail(email string) (bool, *result.Error) {
 	var user User
 	err := pgxscan.Get(context.Background(), DB, &user, "select * from users where email = $1", email)
 
@@ -100,6 +100,19 @@ func FetchUserByUid(uid string) (*User, *result.Error) {
 
 	if pgxscan.NotFound(err) {
 		return nil, result.Err(404, err, "USER_NOT_FOUND", "user with the given uid is not found")
+	} else if err != nil {
+		return nil, result.ServerErr(err)
+	}
+
+	return &user, nil
+}
+
+func FetchUserByEmail(email string) (*User, *result.Error) {
+	var user User
+	err := pgxscan.Get(context.Background(), DB, &user, "select * from users where email = $1", email)
+
+	if pgxscan.NotFound(err) {
+		return nil, result.Err(404, err, "USER_NOT_FOUND", "user with the given email is not found")
 	} else if err != nil {
 		return nil, result.ServerErr(err)
 	}
