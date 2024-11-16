@@ -25,8 +25,9 @@ type User struct {
 	UserId      string     `json:"user_id"`
 	Username    string     `json:"username"`
 	Email       string     `json:"email,omitempty"`
-	PfpUrl      *string    `json:"pfp_url"`
 	Password    string     `json:"-"`
+	Biography   *string    `json:"biography"`
+	PfpUrl      *string    `json:"pfp_url"`
 	CreatedAt   *time.Time `json:"created_at"`
 	LastUpdated *time.Time `json:"last_updated"`
 }
@@ -210,7 +211,7 @@ func CreateUser(userId string, username string, email string, password string) (
 // if a field is nil then it will use the previous value
 //
 //	current_user
-func UpdateUserInfo(current_user User, user_id string, username string, pfp_url string) (*User, *result.Error) {
+func UpdateUserInfo(current_user User, user_id string, username string, biography string, pfp_url string) (*User, *result.Error) {
 	var user User
 	// TODO
 	if user_id != "" {
@@ -221,12 +222,16 @@ func UpdateUserInfo(current_user User, user_id string, username string, pfp_url 
 		current_user.Username = username
 	}
 
+	if biography != "" {
+		current_user.Biography = &biography
+	}
+
 	if pfp_url != "" {
 		current_user.PfpUrl = &pfp_url
 	}
 
-	err := pgxscan.Get(context.Background(), DB, &user, "UPDATE users SET user_id=$1, username=$2, pfp_url=$3 WHERE uid=$4 RETURNING *",
-		current_user.UserId, current_user.Username, current_user.PfpUrl, current_user.Uid)
+	err := pgxscan.Get(context.Background(), DB, &user, "UPDATE users SET user_id=$1, username=$2, pfp_url=$3, biography=$4 WHERE uid=$5 RETURNING *",
+		current_user.UserId, current_user.Username, current_user.PfpUrl, current_user.Biography, current_user.Uid)
 
 	derr := CheckDupeAndServerErr(err)
 	if derr != nil {

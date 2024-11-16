@@ -1,10 +1,9 @@
 package handlers
 
 import (
-	"time"
-
 	"github.com/adrieljansen/go-serverus/db"
 	"github.com/adrieljansen/go-serverus/email"
+	"github.com/adrieljansen/go-serverus/env"
 	"github.com/adrieljansen/go-serverus/result"
 	"github.com/gin-gonic/gin"
 	validation "github.com/go-ozzo/ozzo-validation"
@@ -45,9 +44,10 @@ func GetMe(ctx *gin.Context) {
 }
 
 type PatchUserRequestBody struct {
-	UserId   string `json:"user_id"`
-	Username string `json:"username"`
-	PfpUrl   string `json:"pfp_url"`
+	UserId    string `json:"user_id"`
+	Username  string `json:"username"`
+	PfpUrl    string `json:"pfp_url"`
+	Biography string `json:"biography"`
 }
 
 func (a PatchUserRequestBody) Validate() error {
@@ -55,6 +55,7 @@ func (a PatchUserRequestBody) Validate() error {
 		validation.Field(&a.UserId, validation.Length(3, 35), is.Alphanumeric),
 		validation.Field(&a.Username, validation.Length(2, 35)),
 		validation.Field(&a.PfpUrl, is.URL),
+		validation.Field(&a.Biography, validation.Length(0, 200)),
 	)
 }
 
@@ -81,7 +82,7 @@ func PatchMe(ctx *gin.Context) {
 		return
 	}
 
-	newUser, err := db.UpdateUserInfo(*user, patchRequestBody.UserId, patchRequestBody.Username, patchRequestBody.PfpUrl)
+	newUser, err := db.UpdateUserInfo(*user, patchRequestBody.UserId, patchRequestBody.Username, patchRequestBody.Biography, patchRequestBody.PfpUrl)
 	if err != nil {
 		err.SendJSON(ctx)
 		return
@@ -134,7 +135,7 @@ func PatchMeCredentials(ctx *gin.Context) {
 			OTPCode:     otpCode,
 			NewPassword: patchRequestBody.NewPassword,
 			User:        user,
-		}, time.Now().Add(time.Minute*20).Unix())
+		}, int64(env.EmailResetPassTTL))
 	})
 
 	if err != nil {

@@ -1,8 +1,7 @@
 package middlewares
 
 import (
-	"time"
-
+	"github.com/adrieljansen/go-serverus/env"
 	"github.com/adrieljansen/go-serverus/result"
 	"github.com/adrieljansen/go-serverus/utils"
 	"github.com/gin-gonic/gin"
@@ -26,7 +25,7 @@ var IPRateLimiterCache *IPRateLimiter
 // bind to variable
 func StartIPRateLimiterService(refillFrequency rate.Limit, bucketSize int) *IPRateLimiter {
 	IPRateLimiterCache = &IPRateLimiter{
-		IPRateLimiterMap:    utils.NewLastAccessTtlMap[string, RateLimitInstance](time.Hour * 2),
+		IPRateLimiterMap:    utils.NewLastAccessTtlMap[string, RateLimitInstance](env.RateLimitTTLMapObliteratorInterval),
 		RefillFrequency:     refillFrequency,
 		RateLimitBucketSize: bucketSize,
 	}
@@ -38,7 +37,7 @@ func (i *IPRateLimiter) AddIP(ip string) *rate.Limiter {
 	rl := rate.NewLimiter(IPRateLimiterCache.RefillFrequency, IPRateLimiterCache.RateLimitBucketSize)
 	i.IPRateLimiterMap.Store(ip, RateLimitInstance{
 		limiter: rl,
-	}, int64(time.Minute)*40)
+	}, int64(env.RateLimitInstanceTTL))
 	return rl
 }
 

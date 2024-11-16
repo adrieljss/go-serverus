@@ -73,8 +73,8 @@ func StartEmailService() {
 	bindToTemplate("email/resetpass.html", &resetPassTemplate)
 
 	// every 2 hours clear expired to free up cache
-	PendingConfirmationEmailRegisterCache = utils.NewTtlMap[string, PendingConfirmationEmail](time.Hour * 2)
-	PendingResetPassCache = utils.NewTtlMap[string, PendingResetPass](time.Hour * 2)
+	PendingConfirmationEmailRegisterCache = utils.NewTtlMap[string, PendingConfirmationEmail](env.EmailConfirmationObliteratorInterval)
+	PendingResetPassCache = utils.NewTtlMap[string, PendingResetPass](env.EmailResetPassObliteratorInterval)
 	logrus.Warn("started goroutine for confirmation email and reset pass ttl cache")
 
 	emailDialer = gomail.NewDialer(env.CSMTPHost, int(env.CSMTPPort), env.CSMTPFrom, env.CSMTPPass)

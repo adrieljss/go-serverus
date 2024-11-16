@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 )
 
 // this is env cache is stored, to not do os.Getenv() everytime
 // and to do strict typing
 var (
+	// in .env file, descriptions are in the file
 	CAppName            string
 	CAppRootUrl         string
 	CFrontendRootUrl    string
@@ -22,6 +24,20 @@ var (
 	CSMTPPass           string
 	CGoogleClientID     string
 	CGoogleClientSecret string
+
+	// not in .env
+
+	// rate limit options
+	RateLimitBucketSize                = 2               // for bucket size and frequency, read the ratelimit documentation in golang standard lib
+	RateLimitFrequency                 = 5               // ^^^
+	RateLimitTTLMapObliteratorInterval = time.Hour * 2   // every X minutes the map will delete expired keys (to avoid memleak)
+	RateLimitInstanceTTL               = time.Minute * 5 // ratelimit TTL, if a user is not active in the last Y minutes, its ratelimit instance will be deleted
+
+	// Email Confirmation options
+	EmailConfirmationObliteratorInterval = time.Hour * 2
+	EmailConfirmationTTL                 = time.Minute * 10 // user only have up to X minutes to verify their emails
+	EmailResetPassObliteratorInterval    = time.Hour * 2
+	EmailResetPassTTL                    = time.Minute * 10 // user only have up to X minutes to reset pass
 )
 
 func getEnv(key string) string {

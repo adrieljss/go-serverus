@@ -7,8 +7,9 @@ CREATE TABLE IF NOT EXISTS users (
   user_id VARCHAR(35) UNIQUE NOT NULL,
   username VARCHAR(35) NOT NULL,
   email VARCHAR(50) UNIQUE NOT NULL,
-  pfp_url TEXT,
   password TEXT NOT NULL,
+  biography VARCHAR(200),
+  pfp_url TEXT,
   last_updated TIMESTAMP NOT NULL DEFAULT now(),
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );

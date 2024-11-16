@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"golang.org/x/time/rate"
 )
 
 func main() {
@@ -58,7 +59,7 @@ func main() {
 	// email.SendEmailVerification("arvinhijinks@gmail.com", "123")
 
 	// rate limit bucket will be refilled at 2 requests/second, with max size up to 5 req per bucket
-	middlewares.StartIPRateLimiterService(2, 5)
+	middlewares.StartIPRateLimiterService(rate.Limit(env.RateLimitBucketSize), env.RateLimitFrequency)
 
 	r.Use(middlewares.RateLimitRequired())
 

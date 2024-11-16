@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"strings"
-	"time"
 
 	"github.com/adrieljansen/go-serverus/db"
 	"github.com/adrieljansen/go-serverus/email"
+	"github.com/adrieljansen/go-serverus/env"
 	"github.com/adrieljansen/go-serverus/result"
 	"github.com/gin-gonic/gin"
 	validation "github.com/go-ozzo/ozzo-validation"
@@ -78,7 +78,7 @@ func Register(ctx *gin.Context) {
 		email.PendingConfirmationEmailRegisterCache.Store(registerRequestBody.Email, email.PendingConfirmationEmail{
 			VerificationCode: otpCode,
 			UserToCreate:     &registerRequestBody,
-		}, time.Now().Add(time.Minute*40).Unix())
+		}, int64(env.EmailConfirmationTTL))
 	})
 
 	if err != nil {
