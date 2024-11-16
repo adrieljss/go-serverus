@@ -6,7 +6,7 @@ This is a backend template code written in golang, extending the gin golang libr
 Packed Features:
 - Basic Authentication (JWT-ish but no refreshing) (TODO)
   - Email Confirmation (DONE)
-  - Google Sign In (TODO)
+  - Google Sign In (DONE)
   - Forget Password feature (DONE)
 - PostgreSQL Database (Basic user table) (DONE)
 - Redis Caching (TODO)
