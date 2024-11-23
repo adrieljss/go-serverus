@@ -3,8 +3,8 @@ package middlewares
 import (
 	"strings"
 
-	"github.com/adrieljansen/go-serverus/db"
-	"github.com/adrieljansen/go-serverus/result"
+	"github.com/adrieljss/go-serverus/db"
+	"github.com/adrieljss/go-serverus/result"
 	"github.com/gin-gonic/gin"
 )
 
@@ -31,7 +31,7 @@ func AuthRequired() gin.HandlerFunc {
 		}
 
 		token := headerArr[1]
-		user, err := db.ExtractUserFromJwt(token)
+		user, err := db.ExtractUserFromJwt(ctx.Request.Context(), token)
 		if err != nil {
 			err.SendJSON(ctx)
 			ctx.Abort()

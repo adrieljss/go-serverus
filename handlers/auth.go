@@ -3,10 +3,10 @@ package handlers
 import (
 	"strings"
 
-	"github.com/adrieljansen/go-serverus/db"
-	"github.com/adrieljansen/go-serverus/email"
-	"github.com/adrieljansen/go-serverus/env"
-	"github.com/adrieljansen/go-serverus/result"
+	"github.com/adrieljss/go-serverus/db"
+	"github.com/adrieljss/go-serverus/email"
+	"github.com/adrieljss/go-serverus/env"
+	"github.com/adrieljss/go-serverus/result"
 	"github.com/gin-gonic/gin"
 	validation "github.com/go-ozzo/ozzo-validation"
 )
@@ -40,7 +40,7 @@ func Register(ctx *gin.Context) {
 	dupeExists := false
 	// check dupe
 	{
-		has, err := db.HasUserWithSameId(registerRequestBody.UserId)
+		has, err := db.HasUserWithSameId(ctx.Request.Context(), registerRequestBody.UserId)
 		if err != nil {
 			err.SendJSON(ctx)
 			return
@@ -52,7 +52,7 @@ func Register(ctx *gin.Context) {
 	}
 
 	{
-		has, err := db.UserExistsEmail(registerRequestBody.Email)
+		has, err := db.UserExistsEmail(ctx.Request.Context(), registerRequestBody.Email)
 		if err != nil {
 			err.SendJSON(ctx)
 			return
@@ -121,48 +121,13 @@ func VerifyEmail(ctx *gin.Context) {
 		return
 	}
 
-	res, errRes := db.CreateUserAndGenerateJWT(req.UserToCreate.UserId, req.UserToCreate.Username, req.UserToCreate.Email, req.UserToCreate.Password)
+	res, errRes := db.CreateUserAndGenerateJWT(ctx.Request.Context(), req.UserToCreate.UserId, req.UserToCreate.Username, req.UserToCreate.Email, req.UserToCreate.Password)
 	if errRes != nil {
 		errRes.SendJSON(ctx)
 		return
 	}
 
 	email.PendingConfirmationEmailRegisterCache.Delete(emailString)
-
-	result.Ok(200, res).SendJSON(ctx)
-}
-
-// # POST - Register a user
-//
-// raw - USE ONLY IN DEBUG MODE, NO EMAIL CONFIRMATION REQUIRED
-//
-// needs the following fields in a JSON body
-//
-// user_id, username, email, password
-//
-// content:
-//
-//	`user`: User
-//	`jwt`: string
-func RegisterRaw(ctx *gin.Context) {
-	var registerRequestBody db.RequiredUser
-	registerRequestBody.Email = strings.ToLower(registerRequestBody.Email)
-	if err := ctx.BindJSON(&registerRequestBody); err != nil {
-		result.ErrBodyBind().SendJSON(ctx)
-		return
-	}
-
-	validateErr := registerRequestBody.Validate()
-	if validateErr != nil {
-		result.ErrValidate(validateErr).SendJSON(ctx)
-		return
-	}
-
-	res, errRes := db.CreateUserAndGenerateJWT(registerRequestBody.UserId, registerRequestBody.Username, registerRequestBody.Email, registerRequestBody.Password)
-	if errRes != nil {
-		errRes.SendJSON(ctx)
-		return
-	}
 
 	result.Ok(200, res).SendJSON(ctx)
 }
@@ -198,7 +163,7 @@ func Login(ctx *gin.Context) {
 		return
 	}
 
-	res, err := db.LoginAndGenerateJWT(loginRequestBody.EmailOrUserId, loginRequestBody.Password)
+	res, err := db.LoginAndGenerateJWT(ctx.Request.Context(), loginRequestBody.EmailOrUserId, loginRequestBody.Password)
 	if err != nil {
 		err.SendJSON(ctx)
 		return

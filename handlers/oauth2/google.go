@@ -4,17 +4,31 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/adrieljansen/go-serverus/db"
-	"github.com/adrieljansen/go-serverus/env"
-	"github.com/adrieljansen/go-serverus/result"
+	"github.com/adrieljss/go-serverus/db"
+	"github.com/adrieljss/go-serverus/env"
+	"github.com/adrieljss/go-serverus/result"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
 
 func GoogleOAuth2(conf *oauth2.Config) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		url := conf.AuthCodeURL("state", oauth2.AccessTypeOffline)
 		ctx.Redirect(307, url)
+	}
+}
+
+var Oauth2Config *oauth2.Config
+
+// Env variables needs to be loaded first. But i want the config specifications in this file
+func SetOauth2Config() {
+	Oauth2Config = &oauth2.Config{
+		ClientID:     env.CGoogleClientID,
+		ClientSecret: env.CGoogleClientSecret,
+		RedirectURL:  fmt.Sprintf("%s/auth/oauth2/google/callback", env.CAppRootUrl),
+		Scopes:       []string{"email", "profile"},
+		Endpoint:     google.Endpoint,
 	}
 }
 
@@ -55,7 +69,7 @@ func GoogleOAuth2Callback(conf *oauth2.Config) gin.HandlerFunc {
 		}
 
 		// user exists
-		exists, rerr := db.UserExistsEmail(gres.Email)
+		exists, rerr := db.UserExistsEmail(ctx.Request.Context(), gres.Email)
 		if rerr != nil {
 			rerr.SendJSON(ctx)
 			return
@@ -63,7 +77,7 @@ func GoogleOAuth2Callback(conf *oauth2.Config) gin.HandlerFunc {
 
 		if exists {
 			// login to acc
-			res, rerr := db.DangerousLoginAndGenerateJWT(gres.Email)
+			res, rerr := db.DangerousLoginAndGenerateJWT(ctx.Request.Context(), gres.Email)
 			if rerr != nil {
 				rerr.SendJSON(ctx)
 				return

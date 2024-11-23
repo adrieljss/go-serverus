@@ -1,9 +1,9 @@
 package middlewares
 
 import (
-	"github.com/adrieljansen/go-serverus/env"
-	"github.com/adrieljansen/go-serverus/result"
-	"github.com/adrieljansen/go-serverus/utils"
+	"github.com/adrieljss/go-serverus/env"
+	"github.com/adrieljss/go-serverus/result"
+	"github.com/adrieljss/go-serverus/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"

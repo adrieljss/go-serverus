@@ -6,20 +6,27 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// returns constraint name if true, else if false retun ""
+// use the pgerrcode library, if pgerr is nil, returns false also
 //
-// examples
+// example usage
 //
-//	`users_user_id_key`
-//	`users_email_key`
-func IsDuplicateKeyError(pgerr error) string {
+//	pgErrorIs(err, pgerrcode.UniqueViolation)
+func PgErrorIs(pgerr error, pgcode string) bool {
 	if pgerr == nil {
-		return ""
+		return false
+	}
+	return ToPgError(pgerr).Code == pgcode
+}
+
+// transform a normal error into pgError
+func ToPgError(pgerr error) *pgconn.PgError {
+	if pgerr == nil {
+		return nil
 	}
 	var pgErr *pgconn.PgError
-	errors.As(pgerr, &pgErr)
-	if pgErr.Code == "23505" {
-		return pgErr.ConstraintName
+	if errors.As(pgerr, &pgErr) {
+		return pgErr
+	} else {
+		return nil
 	}
-	return ""
 }

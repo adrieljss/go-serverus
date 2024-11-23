@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"github.com/adrieljansen/go-serverus/db"
-	"github.com/adrieljansen/go-serverus/email"
-	"github.com/adrieljansen/go-serverus/env"
-	"github.com/adrieljansen/go-serverus/result"
+	"github.com/adrieljss/go-serverus/db"
+	"github.com/adrieljss/go-serverus/email"
+	"github.com/adrieljss/go-serverus/env"
+	"github.com/adrieljss/go-serverus/result"
 	"github.com/gin-gonic/gin"
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
@@ -18,7 +18,7 @@ import (
 //	ctx.Param("user_id")
 func GetByUserId(ctx *gin.Context) {
 	user_id := ctx.Param("user_id")
-	user, err := db.FetchUserByUserId(user_id)
+	user, err := db.FetchUserByUserId(ctx.Request.Context(), user_id)
 	if err != nil {
 		err.SendJSON(ctx)
 		return
@@ -82,7 +82,7 @@ func PatchMe(ctx *gin.Context) {
 		return
 	}
 
-	newUser, err := db.UpdateUserInfo(*user, patchRequestBody.UserId, patchRequestBody.Username, patchRequestBody.Biography, patchRequestBody.PfpUrl)
+	newUser, err := db.UpdateUserInfo(ctx.Request.Context(), *user, patchRequestBody.UserId, patchRequestBody.Username, patchRequestBody.Biography, patchRequestBody.PfpUrl)
 	if err != nil {
 		err.SendJSON(ctx)
 		return
@@ -179,7 +179,7 @@ func VerifyResetPass(ctx *gin.Context) {
 		return
 	}
 
-	newUser, err := db.UpdateUserPassword(*user, req.NewPassword)
+	newUser, err := db.UpdateUserPassword(ctx.Request.Context(), *user, req.NewPassword)
 	if err != nil {
 		err.SendJSON(ctx)
 		return

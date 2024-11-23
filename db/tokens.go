@@ -1,11 +1,12 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"time"
 
-	"github.com/adrieljansen/go-serverus/env"
-	"github.com/adrieljansen/go-serverus/result"
+	"github.com/adrieljss/go-serverus/env"
+	"github.com/adrieljss/go-serverus/result"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -28,7 +29,7 @@ func GenerateJwtToken(user *User) (string, *result.Error) {
 }
 
 // User returns nil if token is invalid or no user is found
-func ExtractUserFromJwt(tokenString string) (*User, *result.Error) {
+func ExtractUserFromJwt(ctx context.Context, tokenString string) (*User, *result.Error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("invalid token provided")
@@ -61,7 +62,7 @@ func ExtractUserFromJwt(tokenString string) (*User, *result.Error) {
 		return nil, result.Err(401, err, "INVALID_TOKEN", "auth token must have hashed_password field")
 	}
 
-	return FetchUserByUidAndHashedPassword(uid.(string), hashedPsw.(string))
+	return FetchUserByUidAndHashedPassword(ctx, uid.(string), hashedPsw.(string))
 }
 
 type GenericUserJWTRes struct {
@@ -73,8 +74,8 @@ type GenericUserJWTRes struct {
 //
 // use only in OAuth2 stuff, or other of which you are sure that
 // the owner of the email is correct
-func DangerousLoginAndGenerateJWT(email string) (*GenericUserJWTRes, *result.Error) {
-	user, err := FetchUserByEmail(email)
+func DangerousLoginAndGenerateJWT(ctx context.Context, email string) (*GenericUserJWTRes, *result.Error) {
+	user, err := FetchUserByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}
@@ -91,8 +92,8 @@ func DangerousLoginAndGenerateJWT(email string) (*GenericUserJWTRes, *result.Err
 }
 
 // login with the essential credentials
-func LoginAndGenerateJWT(emailOrUserId string, password string) (*GenericUserJWTRes, *result.Error) {
-	user, err := FetchUserByCredentials(emailOrUserId, password)
+func LoginAndGenerateJWT(ctx context.Context, emailOrUserId string, password string) (*GenericUserJWTRes, *result.Error) {
+	user, err := FetchUserByCredentials(ctx, emailOrUserId, password)
 	if err != nil {
 		return nil, err
 	}
@@ -109,8 +110,8 @@ func LoginAndGenerateJWT(emailOrUserId string, password string) (*GenericUserJWT
 }
 
 // create a user and generate jwt token
-func CreateUserAndGenerateJWT(userId string, username string, email string, password string) (*GenericUserJWTRes, *result.Error) {
-	user, err := CreateUser(userId, username, email, password)
+func CreateUserAndGenerateJWT(ctx context.Context, userId string, username string, email string, password string) (*GenericUserJWTRes, *result.Error) {
+	user, err := CreateUser(ctx, userId, username, email, password)
 	if err != nil {
 		return nil, err
 	}

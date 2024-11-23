@@ -5,10 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/adrieljansen/go-serverus/result"
+	"github.com/adrieljss/go-serverus/result"
 	"github.com/georgysavva/scany/v2/pgxscan"
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
+	"github.com/jackc/pgerrcode"
 )
 
 // CREATE TABLE IF NOT EXISTS users (
@@ -40,6 +41,11 @@ type RequiredUser struct {
 	Password string `json:"password"`
 }
 
+var (
+	UserIdUniqueConstraint = "users_user_id_key"
+	EmailUniqueConstraint  = "users_email_key"
+)
+
 func (a RequiredUser) Validate() error {
 	return validation.ValidateStruct(&a,
 		validation.Field(&a.UserId, validation.Required, validation.Length(3, 35), is.Alphanumeric),
@@ -56,9 +62,9 @@ func (user *User) ClearPrivateInfo() {
 }
 
 // check for duplicated users
-func HasUserWithSameId(userId string) (bool, *result.Error) {
+func HasUserWithSameId(ctx context.Context, userId string) (bool, *result.Error) {
 	var user User
-	err := pgxscan.Get(context.Background(), DB, &user, "select * from users where user_id = $1", userId)
+	err := FetchOne(ctx, DB, &user, "select * from users where user_id = $1", userId)
 
 	if pgxscan.NotFound(err) {
 		return false, nil
@@ -69,9 +75,9 @@ func HasUserWithSameId(userId string) (bool, *result.Error) {
 }
 
 // check for duplicated users
-func UserExistsEmail(email string) (bool, *result.Error) {
+func UserExistsEmail(ctx context.Context, email string) (bool, *result.Error) {
 	var user User
-	err := pgxscan.Get(context.Background(), DB, &user, "select * from users where email = $1", email)
+	err := FetchOne(ctx, DB, &user, "select * from users where email = $1", email)
 
 	if pgxscan.NotFound(err) {
 		return false, nil
@@ -82,9 +88,9 @@ func UserExistsEmail(email string) (bool, *result.Error) {
 }
 
 // no cache
-func FetchUserByUserId(userId string) (*User, *result.Error) {
+func FetchUserByUserId(ctx context.Context, userId string) (*User, *result.Error) {
 	var user User
-	err := pgxscan.Get(context.Background(), DB, &user, "select * from users where user_id = $1", userId)
+	err := FetchOne(ctx, DB, &user, "select * from users where user_id = $1", userId)
 
 	if pgxscan.NotFound(err) {
 		return nil, result.Err(404, err, "USER_NOT_FOUND", "user with the given user id is not found")
@@ -95,9 +101,9 @@ func FetchUserByUserId(userId string) (*User, *result.Error) {
 	return &user, nil
 }
 
-func FetchUserByUid(uid string) (*User, *result.Error) {
+func FetchUserByUid(ctx context.Context, uid string) (*User, *result.Error) {
 	var user User
-	err := pgxscan.Get(context.Background(), DB, &user, "select * from users where uid = $1", uid)
+	err := FetchOne(ctx, DB, &user, "select * from users where uid = $1", uid)
 
 	if pgxscan.NotFound(err) {
 		return nil, result.Err(404, err, "USER_NOT_FOUND", "user with the given uid is not found")
@@ -108,9 +114,9 @@ func FetchUserByUid(uid string) (*User, *result.Error) {
 	return &user, nil
 }
 
-func FetchUserByEmail(email string) (*User, *result.Error) {
+func FetchUserByEmail(ctx context.Context, email string) (*User, *result.Error) {
 	var user User
-	err := pgxscan.Get(context.Background(), DB, &user, "select * from users where email = $1", email)
+	err := FetchOne(ctx, DB, &user, "select * from users where email = $1", email)
 
 	if pgxscan.NotFound(err) {
 		return nil, result.Err(404, err, "USER_NOT_FOUND", "user with the given email is not found")
@@ -121,9 +127,9 @@ func FetchUserByEmail(email string) (*User, *result.Error) {
 	return &user, nil
 }
 
-func FetchUserByUidAndHashedPassword(uid string, hashed_password string) (*User, *result.Error) {
+func FetchUserByUidAndHashedPassword(ctx context.Context, uid string, hashed_password string) (*User, *result.Error) {
 	var user User
-	err := pgxscan.Get(context.Background(), DB, &user, "select * from users where uid = $1 AND password = $2", uid, hashed_password)
+	err := FetchOne(ctx, DB, &user, "select * from users where uid = $1 AND password = $2", uid, hashed_password)
 
 	if pgxscan.NotFound(err) {
 		return nil, result.Err(404, err, "USER_NOT_FOUND", "user with the given uid is not found")
@@ -139,15 +145,15 @@ func FetchUserByUidAndHashedPassword(uid string, hashed_password string) (*User,
 //	emailOrUid string
 //
 // parameter checks if the string has a '@' in it, since Uid doesnt allow any special characters
-func FetchUserByCredentials(emailOrUserId string, password string) (*User, *result.Error) {
+func FetchUserByCredentials(ctx context.Context, emailOrUserId string, password string) (*User, *result.Error) {
 	var user User
 	var err error
 	if strings.Contains(emailOrUserId, "@") {
 		// email mode
-		err = pgxscan.Get(context.Background(), DB, &user, "select * from users where email = $1 and password = crypt($2, password)", emailOrUserId, password)
+		err = FetchOne(ctx, DB, &user, "select * from users where email = $1 and password = crypt($2, password)", emailOrUserId, password)
 	} else {
 		// uid mode
-		err = pgxscan.Get(context.Background(), DB, &user, "select * from users where user_id = $1 and password = crypt($2, password)", emailOrUserId, password)
+		err = FetchOne(ctx, DB, &user, "select * from users where user_id = $1 and password = crypt($2, password)", emailOrUserId, password)
 	}
 
 	if pgxscan.NotFound(err) {
@@ -169,17 +175,18 @@ func FetchUserByCredentials(emailOrUserId string, password string) (*User, *resu
 //	`user_id`
 //	`email`
 func CheckDupeAndServerErr(err error) *result.Error {
-	if err != nil {
-		if res := IsDuplicateKeyError(err); res != "" {
-			if res == "users_user_id_key" {
+	if PgErrorIs(err, pgerrcode.UniqueViolation) {
+		if res := ToPgError(err).ConstraintName; res != "" {
+			if res == UserIdUniqueConstraint {
 				return result.ErrWithMetadata(400, err, "USER_ID_TAKEN", "a user with the same user id already exists", map[string]string{
 					"user_id": "user id already exists",
 				})
-			} else {
-				// users_email_key
+			} else if res == EmailUniqueConstraint {
 				return result.ErrWithMetadata(400, err, "EMAIL_TAKEN", "a user with the same email already exists", map[string]string{
 					"email": "email already exists",
 				})
+			} else {
+				return result.ServerErr(err)
 			}
 		} else {
 			return result.ServerErr(err)
@@ -188,10 +195,10 @@ func CheckDupeAndServerErr(err error) *result.Error {
 	return nil
 }
 
-func CreateUser(userId string, username string, email string, password string) (*User, *result.Error) {
+func CreateUser(ctx context.Context, userId string, username string, email string, password string) (*User, *result.Error) {
 	var user User
 
-	err := pgxscan.Get(context.Background(),
+	err := FetchOne(ctx,
 		DB, &user,
 		"INSERT INTO users (user_id, username, email, password) VALUES ($1,$2,$3,crypt($4, gen_salt('bf'))) RETURNING *",
 		userId, username, email, password)
@@ -211,7 +218,7 @@ func CreateUser(userId string, username string, email string, password string) (
 // if a field is nil then it will use the previous value
 //
 //	current_user
-func UpdateUserInfo(current_user User, user_id string, username string, biography string, pfp_url string) (*User, *result.Error) {
+func UpdateUserInfo(ctx context.Context, current_user User, user_id string, username string, biography string, pfp_url string) (*User, *result.Error) {
 	var user User
 	// TODO
 	if user_id != "" {
@@ -230,7 +237,7 @@ func UpdateUserInfo(current_user User, user_id string, username string, biograph
 		current_user.PfpUrl = &pfp_url
 	}
 
-	err := pgxscan.Get(context.Background(), DB, &user, "UPDATE users SET user_id=$1, username=$2, pfp_url=$3, biography=$4 WHERE uid=$5 RETURNING *",
+	err := FetchOne(ctx, DB, &user, "UPDATE users SET user_id=$1, username=$2, pfp_url=$3, biography=$4 WHERE uid=$5 RETURNING *",
 		current_user.UserId, current_user.Username, current_user.PfpUrl, current_user.Biography, current_user.Uid)
 
 	derr := CheckDupeAndServerErr(err)
@@ -241,14 +248,14 @@ func UpdateUserInfo(current_user User, user_id string, username string, biograph
 }
 
 // updates a user password using UPDATE - SET
-func UpdateUserPassword(current_user User, unhashed_new_password string) (*User, *result.Error) {
+func UpdateUserPassword(ctx context.Context, current_user User, unhashed_new_password string) (*User, *result.Error) {
 	var user User
 
 	if unhashed_new_password == "" {
 		return nil, result.Err(400, nil, "EMPTY_NEW_PASSWORD", "new password must not be empty")
 	}
 
-	err := pgxscan.Get(context.Background(), DB, &user, "UPDATE users SET password = crypt($1, gen_salt('bf')) WHERE uid=$2 RETURNING *",
+	err := FetchOne(ctx, DB, &user, "UPDATE users SET password = crypt($1, gen_salt('bf')) WHERE uid=$2 RETURNING *",
 		unhashed_new_password, current_user.Uid)
 
 	if err != nil {

@@ -5,9 +5,11 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
-// this is env cache is stored, to not do os.Getenv() everytime
+// this is env cache, to not do os.Getenv() everytime
 // and to do strict typing
 var (
 	// in .env file, descriptions are in the file
@@ -16,6 +18,9 @@ var (
 	CFrontendRootUrl    string
 	CServerAddress      string
 	CProductionMode     bool
+	CEnableRedisCaching bool
+	CRedisCacheDuration int
+	CRedisURI           string
 	CPostgresURI        string
 	CJwtSignature       []byte
 	CSMTPHost           string
@@ -24,9 +29,10 @@ var (
 	CSMTPPass           string
 	CGoogleClientID     string
 	CGoogleClientSecret string
+)
 
-	// not in .env
-
+// not needed in .env
+var (
 	// rate limit options
 	RateLimitBucketSize                = 2               // for bucket size and frequency, read the ratelimit documentation in golang standard lib
 	RateLimitFrequency                 = 5               // ^^^
@@ -43,7 +49,7 @@ var (
 func getEnv(key string) string {
 	v := os.Getenv(key)
 	if v == "" {
-		panic(fmt.Sprintf("env var %s not found", key))
+		logrus.Fatal(fmt.Sprintf("env var %s not found", key))
 	}
 	return v
 }
@@ -59,7 +65,7 @@ func LoadUint16(key string) uint16 {
 	vStr := getEnv(key)
 	v, err := strconv.ParseUint(vStr, 10, 16)
 	if err != nil {
-		panic(fmt.Sprintf("env var %s not valid: %s", key, err))
+		logrus.Fatal(fmt.Sprintf("env var %s not valid: %s", key, err))
 	}
 	return uint16(v)
 }
@@ -71,7 +77,7 @@ func LoadBool(key string) bool {
 	vStr := getEnv(key)
 	v, err := strconv.ParseBool(vStr)
 	if err != nil {
-		panic(fmt.Sprintf("env var %s not valid: %s", key, err))
+		logrus.Fatal(fmt.Sprintf("env var %s not valid: %s", key, err))
 	}
 	return v
 }
