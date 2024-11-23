@@ -9,7 +9,7 @@
 |------------------------------------------|--------|
 | [Basic Authentication](#authentication)  | ✅     |
 | [PostgreSQL Database Handler](#database) | ✅     |
-| [Redis Caching](#caching)                | TODO   |
+| [Redis Caching](#caching)                | ✅     |
 | [Ratelimiter](#ratelimiter)              | ✅     |
 | Categorized Directories                  | ✅     |
 | Easy Error Handling                      | ✅     |
