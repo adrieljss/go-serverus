@@ -18,17 +18,11 @@ type TtlMap[K comparable, V any] struct {
 	is bool // is this a fix-date ttl map (0) or last-access ttl map (1)
 }
 
-// always use this
-// constructs a TtlMap
-//
-// a go routine is called upon this function call, where
-// every `interval` it checks for expired elements
-//
-// interval to clear cache is best after every 2 hours
-//
-// ttl is handled by Get() also, if the ttl already expired, Get() will return nil
-//
-// ttl map is fix-date by default, but it can be changed to time to live from last access (the exp field will be added by the initial duration)
+// Constructs a Non-LastAccess TtlMap.
+// A go routine is called upon this function call, where
+// every `interval` it checks for expired elements.
+// Interval to clear cache is best after every 2 hours as to not put too much load on the server.
+// TTL is handled by Get() also, if the ttl already expired, Get() will return nil.
 func NewTtlMap[K comparable, V any](clearInterval time.Duration) (m *TtlMap[K, V]) {
 	var x TtlMap[K, V]
 	x.mp = make(map[K]*item[V])
@@ -37,17 +31,12 @@ func NewTtlMap[K comparable, V any](clearInterval time.Duration) (m *TtlMap[K, V
 	return &x
 }
 
-// always use this
-// constructs a TtlMap
-//
-// a go routine is called upon this function call, where
-// every `interval` it checks for expired elements
-//
-// interval to clear cache is best after every 2 hours
-//
-// ttl is handled by Get() also, if the ttl already expired, Get() will return nil
-//
-// ttl map is fix-date by default, but it can be changed to time to live from last access (the exp field will be added by the initial duration)
+// Constructs a LastAccess TtlMap.
+// A go routine is called upon this function call, where
+// every `interval` it checks for expired elements.
+// Interval to clear cache is best after every 2 hours as to not put too much load on the server.
+// TTL is handled by Get() also, if the ttl already expired, Get() will return nil.
+// LastAccess TTLMap will refresh the TTL when accessed. (will update the exp date to now() + initialDuration)
 func NewLastAccessTtlMap[K comparable, V any](clearInterval time.Duration) (m *TtlMap[K, V]) {
 	var x TtlMap[K, V]
 	x.mp = make(map[K]*item[V])
@@ -60,12 +49,9 @@ func (mp *TtlMap[K, V]) Len() int {
 	return len(mp.mp)
 }
 
-// Thread-safe store
-//
-// exp as the date to expire in UNIX time,
-// set expOffset to -1 to set for infinite time (may cause memory leak)
-//
-// the final exp time is now() + expOffset
+// Thread-safe store.
+// Exp as the date to expire in UNIX time. Set expOffset to -1 to set for infinite time (may cause huge memory being used).
+// The final exp time is now() + expOffset.
 func (mp *TtlMap[K, V]) Store(key K, val V, expOffset int64) {
 	mp.l.Lock()
 	if expOffset == -1 {
@@ -84,23 +70,28 @@ func (mp *TtlMap[K, V]) Store(key K, val V, expOffset int64) {
 	mp.l.Unlock()
 }
 
-// if ttl already expired (but still exists in cache), this will delete the key and return (nil, false)
-//
-// if this is a last access map, this will update exp time to now() + initialDuration
+// If ttl already expired (but still exists in cache), this will delete the key and return (nil, false).
+// If this is a last access map and the item still exists, this will update exp time to now() + initialDuration
 func (mp *TtlMap[K, V]) Get(key K) (*V, bool) {
 	// no need for mutex lock on read
 	if _, ok := mp.mp[key]; !ok {
 		return nil, false
 	}
 
-	// handle for -1
-	if mp.mp[key].exp >= 0 && mp.mp[key].exp < time.Now().Unix() {
+	// handle for -1 (infinite time)
+	if mp.mp[key].exp == -1 {
+		return &mp.mp[key].value, true
+	}
+
+	// if expires, then delete immediately without obliterator.
+	if mp.mp[key].exp < time.Now().Unix() {
 		mp.l.Lock()
 		delete(mp.mp, key)
 		mp.l.Unlock()
 		return nil, false
 	}
 
+	// if is last access map, add to ttl time since last access.
 	if mp.is && mp.mp[key].initialDuration >= 0 {
 		mp.mp[key].exp = time.Now().Unix() + mp.mp[key].initialDuration
 	}

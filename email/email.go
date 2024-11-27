@@ -67,12 +67,16 @@ func bindToTemplate(filePath string, bindTo **template.Template) {
 	logrus.Warnf("loaded email template %s", filePath)
 }
 
-// loads all neccessary files to the cache
+// Loads verification and reset pass email HTML template files to the cache.
+//
+//	"email/verification.html"
+//	"email/resetpass.html"
+//
+// Starts 2 goroutines for ttlmap user register and resetting passwords.
 func StartEmailService() {
 	bindToTemplate("email/verification.html", &emailVerificationTemplate)
 	bindToTemplate("email/resetpass.html", &resetPassTemplate)
 
-	// every 2 hours clear expired to free up cache
 	PendingConfirmationEmailRegisterCache = utils.NewTtlMap[string, PendingConfirmationEmail](env.EmailConfirmationObliteratorInterval)
 	PendingResetPassCache = utils.NewTtlMap[string, PendingResetPass](env.EmailResetPassObliteratorInterval)
 	logrus.Warn("started goroutine for confirmation email and reset pass ttl cache")
@@ -80,7 +84,7 @@ func StartEmailService() {
 	emailDialer = gomail.NewDialer(env.CSMTPHost, int(env.CSMTPPort), env.CSMTPFrom, env.CSMTPPass)
 }
 
-// generate an otp code with `secret` and launch a goroutine of cbfn
+// Generates an OTP code with provided secret and launches a goroutine of a callback function.
 func GenerateOtpAndAct(secret string, cbfn func(string)) *result.Error {
 	otpCode, errOtp := totp.GenerateCode(secret, time.Now())
 	if errOtp != nil {
@@ -107,7 +111,7 @@ type ResetPassArgs struct {
 	ResetPassCode string
 }
 
-// Sends a otp code for email verification to the target email
+// Sends a OTP code for email verification to the target email.
 func SendEmailVerification(targetEmail string, emailVerificationUrlCode string, userId string) *result.Error {
 	m := gomail.NewMessage()
 	m.SetHeader("From", env.CSMTPFrom)
@@ -133,7 +137,7 @@ func SendEmailVerification(targetEmail string, emailVerificationUrlCode string, 
 	return nil
 }
 
-// sends an otp code for reset password to the target email
+// Sends an OTP code for reset password to the target email.
 func SendEmailResetPassword(targetEmail string, resetPassCode string, userId string) *result.Error {
 	m := gomail.NewMessage()
 	m.SetHeader("From", env.CSMTPFrom)

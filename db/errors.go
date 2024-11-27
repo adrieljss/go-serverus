@@ -6,9 +6,9 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// use the pgerrcode library, if pgerr is nil, returns false also
-//
-// example usage
+// Compares the error code to the pgerrcode library.
+// If pgerr is nil returns false.
+// Example usage:
 //
 //	pgErrorIs(err, pgerrcode.UniqueViolation)
 func PgErrorIs(pgerr error, pgcode string) bool {
@@ -18,7 +18,7 @@ func PgErrorIs(pgerr error, pgcode string) bool {
 	return ToPgError(pgerr).Code == pgcode
 }
 
-// transform a normal error into pgError
+// Transforms a normal error into a pgerror.
 func ToPgError(pgerr error) *pgconn.PgError {
 	if pgerr == nil {
 		return nil

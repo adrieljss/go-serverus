@@ -20,7 +20,7 @@ var FetchMany = pgxscan.Select
 
 // A caching wrapper to
 //
-//	pgxscan.Get(ctx context.Context, db pgxscan.Querier, dst interface{}, query string, args ...interface{})
+//	FetchOne(ctx context.Context, db pgxscan.Querier, dst interface{}, query string, args ...interface{})
 //
 // Queries to PostgreSQL, but contacts the local Redis DB first.
 // Only use in frequent operations (such as comments, posts, etc), as a cache-miss is expensive.
@@ -30,7 +30,7 @@ func FetchOneWithCache(ctx context.Context, db pgxscan.Querier, dst interface{},
 
 // A caching wrapper to
 //
-//	pgxscan.Select(ctx context.Context, db pgxscan.Querier, dst interface{}, query string, args ...interface{})
+//	FetchMany(ctx context.Context, db pgxscan.Querier, dst interface{}, query string, args ...interface{})
 //
 // Queries to PostgreSQL, but contacts the local Redis DB first.
 // Only use in frequent operations (such as comments, posts, etc), as a cache-miss is expensive.

@@ -11,11 +11,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// GET - get a user by their user_id
+// [GET] Returns a user by their user_id.
 //
-// need to have parameter accessible by
-//
-//	ctx.Param("user_id")
+// Needs to have the following URL parameters:
+//   - user_id
 func GetByUserId(ctx *gin.Context) {
 	user_id := ctx.Param("user_id")
 	user, err := db.FetchUserByUserId(ctx.Request.Context(), user_id)
@@ -28,9 +27,9 @@ func GetByUserId(ctx *gin.Context) {
 	result.Ok(200, user).SendJSON(ctx)
 }
 
-// GET - Gets a user by their auth token
+// [GET] Returns a user by their jwt token.
 //
-// relies on protected middleware
+// Relies on protected middleware.
 func GetMe(ctx *gin.Context) {
 	user, exists := ctx.Get("user")
 	// ctx.Get("user") must exists at all times,
@@ -59,9 +58,9 @@ func (a PatchUserRequestBody) Validate() error {
 	)
 }
 
-// PATCH - Updates user information
+// [PATCH] Updates user non-credential informations.
 //
-// relies on protected middleware
+// Relies on protected middleware.
 func PatchMe(ctx *gin.Context) {
 	usr, exists := ctx.Get("user")
 	if !exists {
@@ -101,9 +100,10 @@ func (a PatchRequestResetPass) Validate() error {
 	)
 }
 
-// PATCH - Updates user information (for password)
+// [PATCH] Updates user credentials.
 //
-// relies on protected middleware
+// This process uses reset pass email confirmation.
+// Relies on protected middleware.
 func PatchMeCredentials(ctx *gin.Context) {
 	usr, exists := ctx.Get("user")
 	if !exists {
@@ -145,18 +145,17 @@ func PatchMeCredentials(ctx *gin.Context) {
 	result.Ok(204, "reset password email sent").SendJSON(ctx)
 }
 
-// POST - OTP Code to reset password
+// [POST] Verifies OTP codes for password resets.
 //
-// needs the following queries
+// Relies on protected middleware.
+// Needs the following URL queries:
 //
 //   - otp
 //
-// content:
+// Success Content:
 //
 //	`user`: User
 //	`jwt`: string
-//
-// relies on protected middleware
 func VerifyResetPass(ctx *gin.Context) {
 	otpCode := ctx.Query("otp")
 	if otpCode == "" {

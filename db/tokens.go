@@ -10,6 +10,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// Generates a JWT token according to user's credentials.
 func GenerateJwtToken(user *User) (string, *result.Error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
@@ -18,7 +19,7 @@ func GenerateJwtToken(user *User) (string, *result.Error) {
 	claims["user_uid"] = user.Uid
 	claims["hashed_password"] = user.Password
 	// jwt token is valid for 7 days after issue
-	claims["exp"] = time.Now().AddDate(0, 0, 7).Unix()
+	claims["exp"] = time.Now().Add(env.JwtTtl).Unix()
 	claims["iat"] = time.Now().Unix()
 
 	tokenString, err := token.SignedString(env.CJwtSignature)
@@ -28,7 +29,7 @@ func GenerateJwtToken(user *User) (string, *result.Error) {
 	return tokenString, nil
 }
 
-// User returns nil if token is invalid or no user is found
+// User returns nil if token is invalid or no user is found.
 func ExtractUserFromJwt(ctx context.Context, tokenString string) (*User, *result.Error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -70,10 +71,10 @@ type GenericUserJWTRes struct {
 	User *User  `json:"user"`
 }
 
-// this is dangerous because only email is needed to authenticate
+// This is dangerous because only email is needed to authenticate.
 //
-// use only in OAuth2 stuff, or other of which you are sure that
-// the owner of the email is correct
+// Use only in OAuth2 stuff, or other services of which
+// you are sure that the owner of the email is correct.
 func DangerousLoginAndGenerateJWT(ctx context.Context, email string) (*GenericUserJWTRes, *result.Error) {
 	user, err := FetchUserByEmail(ctx, email)
 	if err != nil {
@@ -91,7 +92,7 @@ func DangerousLoginAndGenerateJWT(ctx context.Context, email string) (*GenericUs
 	}, nil
 }
 
-// login with the essential credentials
+// Login with essential credentials (email/userId and password).
 func LoginAndGenerateJWT(ctx context.Context, emailOrUserId string, password string) (*GenericUserJWTRes, *result.Error) {
 	user, err := FetchUserByCredentials(ctx, emailOrUserId, password)
 	if err != nil {

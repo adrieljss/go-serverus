@@ -8,13 +8,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// use this as a middleware if the route is currently protected
-//
-// user information can be accessed via
+// Middleware to protect routes.
+// Fetches user informations from jwt token and sets them to the request context.
+// Uses a JWT-like authentication.
+// User information can be accessed via
 //
 //	ctx.Get("user") // -> returns db.User
-//
-// JWT Authentication
 func AuthRequired() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		header := ctx.GetHeader("Authorization")

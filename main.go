@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/adrieljss/go-serverus/db"
 	"github.com/adrieljss/go-serverus/email"
@@ -9,6 +10,7 @@ import (
 	"github.com/adrieljss/go-serverus/handlers"
 	oauth_handlers "github.com/adrieljss/go-serverus/handlers/oauth2"
 	"github.com/adrieljss/go-serverus/middlewares"
+	"github.com/gin-contrib/timeout"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
@@ -25,7 +27,9 @@ func main() {
 	env.CAppRootUrl = env.LoadString("APP_ROOT_URL")
 	env.CFrontendRootUrl = env.LoadString("FRONTEND_ROOT_URL")
 	env.CProductionMode = env.LoadBool("PRODUCTION_MODE")
+	env.CRequestTimeout = env.LoadUint16("REQUEST_TIMEOUT")
 	env.CEnableRedisCaching = env.LoadBool("ENABLE_REDIS_CACHING")
+	env.CRedisCacheDuration = env.LoadInt("REDIS_CACHE_TTL")
 	env.CRedisURI = env.LoadString("REDIS_URI")
 	env.CPostgresURI = env.LoadString("POSTGRES_URI")
 	env.CJwtSignature = env.LoadByteSlice("JWT_SIGNATURE")
@@ -48,14 +52,15 @@ func main() {
 	} else {
 		// development mode
 		r = gin.Default()
-		r.POST("/auth/registerRaw", handlers.RegisterRaw)
 		logrus.SetFormatter(&logrus.TextFormatter{
 			ForceColors: true,
 		})
 	}
 
 	db.ConnectToDB(env.CPostgresURI)
-	db.ConnectToRedis(env.CRedisURI)
+	if env.CEnableRedisCaching {
+		db.ConnectToRedis(env.CRedisURI)
+	}
 
 	email.StartEmailService()
 	// email.SendEmailVerification("arvinhijinks@gmail.com", "123")
@@ -64,6 +69,12 @@ func main() {
 	middlewares.StartIPRateLimiterService(rate.Limit(env.RateLimitBucketSize), env.RateLimitFrequency)
 	oauth_handlers.SetOauth2Config()
 
+	r.Use(timeout.New(
+		timeout.WithTimeout(time.Second*time.Duration(env.CRequestTimeout)),
+		timeout.WithHandler(func(ctx *gin.Context) {
+			ctx.Next()
+		}),
+	))
 	r.Use(middlewares.RateLimitRequired())
 
 	// is server ok
@@ -71,7 +82,12 @@ func main() {
 		ctx.String(200, fmt.Sprintf("%s server is ok, root dir: %s", env.CAppName, env.CAppRootUrl))
 	})
 
-	r.GET("/verifyEmail")
+	if !env.CProductionMode {
+		r.POST("/dev/registerRaw", handlers.RegisterRaw)
+		r.GET("/dev/fetchAllUsersRaw", handlers.FetchAllUsersRaw)
+		r.GET("/dev/longDelayRaw", handlers.LongDelayRaw)
+	}
+
 	r.POST("/auth/register", handlers.Register)
 	r.POST("/auth/verifyEmail", handlers.VerifyEmail)
 	r.POST("/auth/login", handlers.Login)
@@ -85,9 +101,6 @@ func main() {
 	r.PATCH("/users/@me", middlewares.AuthRequired(), handlers.PatchMe)
 	r.PATCH("/users/@me/password", middlewares.AuthRequired(), handlers.PatchMeCredentials)
 	r.POST("/users/@me/verifyResetPass", middlewares.AuthRequired(), handlers.VerifyResetPass)
-
-	// RAW DANGEROUS CODE, please read in handlers/raw.go
-	// ! r.GET("/raw/redisTest", handlers.RedisTestRaw)
 
 	r.Run(env.CServerAddress)
 }

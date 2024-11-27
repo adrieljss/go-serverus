@@ -11,13 +11,17 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 )
 
-// # POST - Register a user
+// [POST] Registers a user
 //
-// needs the following fields in a JSON body
+// Registers a user, but sending them an email first to confirm email.
+// Needs the following fields in the JSON body:
 //
-// user_id, username, email, password
+//   - user_id
+//   - username
+//   - email
+//   - password
 //
-// content:
+// Success Content:
 //
 //	`user`: User
 //	`jwt`: string
@@ -40,7 +44,7 @@ func Register(ctx *gin.Context) {
 	dupeExists := false
 	// check dupe
 	{
-		has, err := db.HasUserWithSameId(ctx.Request.Context(), registerRequestBody.UserId)
+		has, err := db.UserExistsUserId(ctx.Request.Context(), registerRequestBody.UserId)
 		if err != nil {
 			err.SendJSON(ctx)
 			return
@@ -89,19 +93,18 @@ func Register(ctx *gin.Context) {
 	result.Ok(204, "verification email sent").SendJSON(ctx)
 }
 
-// POST - To verify email using given otp code
+// [POST] Verifies email using OTP code.
 //
-// needs the following queries
+// No JSON body needed.
+// Needs the following url queries:
 //
 //   - otp
 //   - email
 //
-// content:
+// Success content:
 //
 //	`user`: User
 //	`jwt`: string
-//
-// after this forward user to frontend
 func VerifyEmail(ctx *gin.Context) {
 	emailString := ctx.Query("email")
 	otpCode := ctx.Query("otp")
@@ -144,7 +147,11 @@ func (a LoginRequestBody) Validate() error {
 	)
 }
 
-// POST - logins with `email_or_userid` and `password` in JSON body
+// [POST] Logins a User.
+//
+// Needs the following fields in the JSON body:
+//   - email_or_userid
+//   - password
 //
 // content:
 //

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"strings"
+	"time"
 
 	"github.com/adrieljss/go-serverus/db"
 	"github.com/adrieljss/go-serverus/result"
@@ -47,9 +48,8 @@ func RegisterRaw(ctx *gin.Context) {
 	result.Ok(200, res).SendJSON(ctx)
 }
 
-// ! THIS IS DANGEROUS PLEASE DONT DO!, only in debug mode
 // fetches all users (will be slow), but to test redis caching efficiency
-func RedisTestRaw(ctx *gin.Context) {
+func FetchAllUsersRaw(ctx *gin.Context) {
 	var users []db.User
 	err := db.FetchManyWithCache(ctx, db.DB, &users, "SELECT * FROM users")
 	if err != nil {
@@ -57,4 +57,9 @@ func RedisTestRaw(ctx *gin.Context) {
 		return
 	}
 	result.Ok(200, users).SendJSON(ctx)
+}
+
+func LongDelayRaw(ctx *gin.Context) {
+	time.Sleep(10 * time.Second)
+	result.Ok(204, nil).SendJSON(ctx)
 }

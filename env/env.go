@@ -18,8 +18,9 @@ var (
 	CFrontendRootUrl    string
 	CServerAddress      string
 	CProductionMode     bool
+	CRequestTimeout     uint16
 	CEnableRedisCaching bool
-	CRedisCacheDuration int
+	CRedisCacheDuration int16
 	CRedisURI           string
 	CPostgresURI        string
 	CJwtSignature       []byte
@@ -33,6 +34,8 @@ var (
 
 // not needed in .env
 var (
+	JwtTtl = time.Hour * 24 * 7 // jwt token valid for 7 days
+
 	// rate limit options
 	RateLimitBucketSize                = 2               // for bucket size and frequency, read the ratelimit documentation in golang standard lib
 	RateLimitFrequency                 = 5               // ^^^
@@ -58,7 +61,8 @@ func LoadString(key string) string {
 	return getEnv(key)
 }
 
-// loads an unsigned integer (positive only), parsed using
+// Loads an unsigned integer (positive only).
+// Parsed using:
 //
 //	strconv.ParseUint(val, 10, 16)
 func LoadUint16(key string) uint16 {
@@ -70,9 +74,19 @@ func LoadUint16(key string) uint16 {
 	return uint16(v)
 }
 
-// accepts 0, 1, true, false or any type of capitalizations, parsed using
+func LoadInt(key string) int16 {
+	vStr := getEnv(key)
+	v, err := strconv.ParseInt(vStr, 10, 16)
+	if err != nil {
+		logrus.Fatal(fmt.Sprintf("env var %s not valid: %s", key, err))
+	}
+	return int16(v)
+}
+
+// Accepts 0, 1, true, false.
+// Parsed using:
 //
-//	strconv.ParseBool()
+//	strconv.ParseBool(val)
 func LoadBool(key string) bool {
 	vStr := getEnv(key)
 	v, err := strconv.ParseBool(vStr)

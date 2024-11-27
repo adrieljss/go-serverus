@@ -13,13 +13,17 @@ import (
 )
 
 // CREATE TABLE IF NOT EXISTS users (
-//   uid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-//   user_id VARCHAR(35) UNIQUE NOT NULL,
-//   username VARCHAR(50) NOT NULL,
-//   email VARCHAR(50) UNIQUE NOT NULL,
-//   password TEXT NOT NULL,
-//   created_at TIMESTAMP NOT NULL DEFAULT now()
-// );
+// 	uid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+// 	user_id VARCHAR(35) UNIQUE NOT NULL,
+// 	username VARCHAR(35) NOT NULL,
+// 	email VARCHAR(50) UNIQUE NOT NULL,
+// 	password TEXT NOT NULL,
+// 	biography VARCHAR(200),
+// 	pfp_url TEXT,
+// 	last_updated TIMESTAMP NOT NULL DEFAULT now(),
+// 	created_at TIMESTAMP NOT NULL DEFAULT now(),
+// 	role_level int4 DEFAULT 0 -- priviledges etc
+//   );
 
 type User struct {
 	Uid         string     `json:"uid"`
@@ -31,9 +35,10 @@ type User struct {
 	PfpUrl      *string    `json:"pfp_url"`
 	CreatedAt   *time.Time `json:"created_at"`
 	LastUpdated *time.Time `json:"last_updated"`
+	RoleLevel   int        `json:"role_level"`
 }
 
-// this struct is used when want to create users
+// Required fields for users.
 type RequiredUser struct {
 	UserId   string `json:"user_id"`
 	Username string `json:"username"`
@@ -55,14 +60,13 @@ func (a RequiredUser) Validate() error {
 	)
 }
 
-// clears out private information - emails and passwords
+// Clears out private information: emails and passwords.
 func (user *User) ClearPrivateInfo() {
 	user.Email = ""
 	user.Password = ""
 }
 
-// check for duplicated users
-func HasUserWithSameId(ctx context.Context, userId string) (bool, *result.Error) {
+func UserExistsUserId(ctx context.Context, userId string) (bool, *result.Error) {
 	var user User
 	err := FetchOne(ctx, DB, &user, "select * from users where user_id = $1", userId)
 
@@ -74,7 +78,6 @@ func HasUserWithSameId(ctx context.Context, userId string) (bool, *result.Error)
 	return true, nil
 }
 
-// check for duplicated users
 func UserExistsEmail(ctx context.Context, email string) (bool, *result.Error) {
 	var user User
 	err := FetchOne(ctx, DB, &user, "select * from users where email = $1", email)
@@ -87,7 +90,6 @@ func UserExistsEmail(ctx context.Context, email string) (bool, *result.Error) {
 	return true, nil
 }
 
-// no cache
 func FetchUserByUserId(ctx context.Context, userId string) (*User, *result.Error) {
 	var user User
 	err := FetchOne(ctx, DB, &user, "select * from users where user_id = $1", userId)
@@ -140,11 +142,7 @@ func FetchUserByUidAndHashedPassword(ctx context.Context, uid string, hashed_pas
 	return &user, nil
 }
 
-// the
-//
-//	emailOrUid string
-//
-// parameter checks if the string has a '@' in it, since Uid doesnt allow any special characters
+// The `emailOrUserId` parameter checks if the string has a '@' in it, since Uid doesnt allow any special characters.
 func FetchUserByCredentials(ctx context.Context, emailOrUserId string, password string) (*User, *result.Error) {
 	var user User
 	var err error
@@ -168,12 +166,8 @@ func FetchUserByCredentials(ctx context.Context, emailOrUserId string, password 
 	return &user, nil
 }
 
-// check for constrainted duplicates (in updates or inserts) and returns correspoding errors or nil
-//
-// example of constrained duplicates
-//
-//	`user_id`
-//	`email`
+// Check for unique violation errors (in updates or inserts) and returns correspoding errors or nil.
+// Only checks for user_id and email.
 func CheckDupeAndServerErr(err error) *result.Error {
 	if PgErrorIs(err, pgerrcode.UniqueViolation) {
 		if res := ToPgError(err).ConstraintName; res != "" {
@@ -210,14 +204,9 @@ func CreateUser(ctx context.Context, userId string, username string, email strin
 	return &user, nil
 }
 
-// ! THE FUNCTIONS BELOW DO NOT CHECK IF USER EXISTS BEFOREHAND
-// ! SO ALWAYS USE IN PROTECTED ROUTE OR MAY CAUSE UNKNOWN SERVER_ERRORS
-
-// updates a user (no credentials) using UPDATE - SET
-//
-// if a field is nil then it will use the previous value
-//
-//	current_user
+// Updates a user (no credentials).
+// If a field is empty then it will use the previous value.
+// Only use in protected routes.
 func UpdateUserInfo(ctx context.Context, current_user User, user_id string, username string, biography string, pfp_url string) (*User, *result.Error) {
 	var user User
 	// TODO
@@ -237,6 +226,10 @@ func UpdateUserInfo(ctx context.Context, current_user User, user_id string, user
 		current_user.PfpUrl = &pfp_url
 	}
 
+	if user_id == "" && username == "" && biography == "" && pfp_url == "" {
+		return nil, result.Err(400, nil, "ZERO_UPDATE_FIELDS", "a field must be updated")
+	}
+
 	err := FetchOne(ctx, DB, &user, "UPDATE users SET user_id=$1, username=$2, pfp_url=$3, biography=$4 WHERE uid=$5 RETURNING *",
 		current_user.UserId, current_user.Username, current_user.PfpUrl, current_user.Biography, current_user.Uid)
 
@@ -247,7 +240,8 @@ func UpdateUserInfo(ctx context.Context, current_user User, user_id string, user
 	return &user, nil
 }
 
-// updates a user password using UPDATE - SET
+// Updates a user's password.
+// Only use in protected routes.
 func UpdateUserPassword(ctx context.Context, current_user User, unhashed_new_password string) (*User, *result.Error) {
 	var user User
 

@@ -71,11 +71,9 @@ func ErrBodyBind() *Result {
 	return Err(400, nil, "INVALID_BODY", "invalid json body")
 }
 
-// also logs server error with
+// Also logs server error with:
 //
 //	logrus.WithError(err).Error("something went wrong")
-//
-// so no need to do logging
 func ServerErr(err error) *Result {
 	logrus.WithError(err).Error("something went wrong")
 	return Err(500, err, "UNKNOWN_ERROR", "something went wrong with the server")

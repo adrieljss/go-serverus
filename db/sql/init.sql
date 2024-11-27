@@ -1,5 +1,7 @@
--- CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
--- CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+-- CREATE DATABASE serverus_db;
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- @block
 CREATE TABLE IF NOT EXISTS users (
@@ -11,7 +13,8 @@ CREATE TABLE IF NOT EXISTS users (
   biography VARCHAR(200),
   pfp_url TEXT,
   last_updated TIMESTAMP NOT NULL DEFAULT now(),
-  created_at TIMESTAMP NOT NULL DEFAULT now()
+  created_at TIMESTAMP NOT NULL DEFAULT now(),
+  role_level int4 DEFAULT 0 -- priviledges etc
 );
 
 -- @block insert test

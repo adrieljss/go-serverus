@@ -52,9 +52,8 @@ func (i *IPRateLimiter) Allow(ip string) bool {
 	}
 }
 
-// use this as a middleware if the route is ratelimited
-//
-// uses IP-Based ratelimiting
+// Middleware to ratelimit routes.
+// Ratelimiter uses the golang's standard library for ratelimiters.
 func RateLimitRequired() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		if !IPRateLimiterCache.Allow(ctx.ClientIP()) {
